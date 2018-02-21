@@ -78,17 +78,32 @@ def open_images(data_dir, log_df, controls):
     return X, y
 
 
-def data_generator(data_dir, batch_size=32, controls=['steering', 'throttle', 'speed', 'brake']):
+def data_generator(data_dir, log_df, batch_size=32, controls=['steering', 'throttle', 'speed', 'brake']):
     '''
     Infinite data generator for use in Keras' model.fit_generator.
-    Opens images from all three cameras using open_images
+    Opens images from all three cameras using open_images.
+    batch_size is counted in terms of the driving log entries,
+    so the yielded batches will be 3 times larger
     '''
 
-    log_df = sklearn.utils.shuffle( load_log(data_dir) )
-    n = len(controls)
+    log_df = sklearn.utils.shuffle(log_df)
+    n = len(log_df)
 
     while True:
         for offset in range(0, n, batch_size):
             log_subset = log_df[offset:offset+batch_size]
             X_batch, y_batch = open_images(data_dir, log_subset, controls)
             yield sklearn.utils.shuffle(X_batch, y_batch)
+
+
+def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
+
+    history = model.fit_generator(
+        train_gen,
+        samples_per_epoch=len(log_df_train)*3,
+        validation_data=valid_gen,
+        nb_val_samples=len(log_df_valid)*3,
+        nb_epoch=n_epochs
+    )
+
+    return history
