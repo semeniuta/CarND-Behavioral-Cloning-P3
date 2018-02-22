@@ -14,6 +14,39 @@ def load_log(data_dir):
     return pd.read_csv(logfile)
 
 
+def add_data_dir_info_to_df(df, data_dir):
+    '''
+    Modify in-place the supplied driving log dataframe so that
+    image paths are concatenated with the corresponding
+    data_dir
+    '''
+
+    for i in df.index:
+        for col in ('center', 'left', 'right'):
+            orig = df.loc[i][col]
+            new_val = data_dir + '/' + orig.strip()
+            df.at[i, col] = new_val
+
+
+def load_and_combine_logs(dirs):
+    '''
+    Load driving logs from the supplied directories
+    as a single Pandas dataframe
+    '''
+
+    dataframes = []
+    for d in dirs:
+        df = load_log(d)
+        add_data_dir_info_to_df(df, d)
+        dataframes.append(df)
+
+    res = dataframes[0]
+    for df in dataframes[1:]:
+        res = res.append(df, ignore_index=True)
+
+    return res
+
+
 def load_data(
     data_dir,
     im_groups=('center', 'left', 'right'),
