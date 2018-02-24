@@ -24,11 +24,11 @@ def add_data_dir_info_to_df(df, data_dir):
     for i in df.index:
         for col in ('center', 'left', 'right'):
             orig = df.loc[i][col]
-            new_val = data_dir + '/' + orig.strip()
+            new_val = os.path.join(data_dir, orig.strip())
             df.at[i, col] = new_val
 
 
-def load_and_combine_logs(dirs):
+def load_and_combine_logs(*dirs):
     '''
     Load driving logs from the supplied directories
     as a single Pandas dataframe
@@ -80,7 +80,7 @@ def load_data(
     return images, controls_df
 
 
-def open_images(data_dir, log_df, controls):
+def open_images(log_df, controls):
     '''
     For a given driving log data frame (or a subset of one),
     open images from all three cameras and gather them with
@@ -96,7 +96,7 @@ def open_images(data_dir, log_df, controls):
         controls_vals = line[controls]
         for c in cameras:
 
-            imfile = os.path.join(data_dir, line[c].strip())
+            imfile = line[c]
             im = cv2.imread(imfile)
 
             im_list.append(im)
@@ -111,7 +111,7 @@ def open_images(data_dir, log_df, controls):
     return X, y
 
 
-def data_generator(data_dir, log_df, batch_size=32, controls=['steering', 'throttle', 'speed', 'brake']):
+def data_generator(log_df, batch_size=32, controls=['steering', 'throttle', 'speed', 'brake']):
     '''
     Infinite data generator for use in Keras' model.fit_generator.
     Opens images from all three cameras using open_images.
@@ -125,7 +125,7 @@ def data_generator(data_dir, log_df, batch_size=32, controls=['steering', 'throt
     while True:
         for offset in range(0, n, batch_size):
             log_subset = log_df[offset:offset+batch_size]
-            X_batch, y_batch = open_images(data_dir, log_subset, controls)
+            X_batch, y_batch = open_images(log_subset, controls)
             yield sklearn.utils.shuffle(X_batch, y_batch)
 
 
