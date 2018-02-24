@@ -129,6 +129,25 @@ def data_generator(log_df, batch_size=32, controls=['steering', 'throttle', 'spe
             yield sklearn.utils.shuffle(X_batch, y_batch)
 
 
+def data_generator_from_muiltiple_sets(log_dataframes, batch_sizes, controls=['steering', 'throttle', 'speed', 'brake']):
+
+    assert len(log_dataframes) == len(batch_sizes)
+
+    generators = [data_generator(df, sz, controls) for df, sz in zip(log_dataframes, batch_sizes)]
+
+    while True:
+
+        x = []
+        y = []
+
+        for gen in generators:
+            X_batch, y_batch = next(gen)
+            x.append(X_batch)
+            y.append(y_batch)
+
+        yield sklearn.utils.shuffle(np.vstack(x), np.hstack(y))
+
+
 def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
 
     history = model.fit_generator(
