@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 import cv2
+from sklearn.model_selection import train_test_split
 
 
 def load_log(data_dir):
@@ -159,3 +160,37 @@ def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
     )
 
     return history
+
+
+def train(model, log_df, batch_sz, epochs):
+
+    train, valid = train_test_split(log_df, test_size=0.2)
+    valid_gen = data_generator(valid, batch_size=batch_sz, controls=['steering'])
+    train_gen = data_generator(train, batch_size=batch_sz, controls=['steering'])
+
+    history = fit_gen(model, train_gen, valid_gen, train, valid, n_epochs=epochs)
+
+    return train, valid, history
+
+
+def train_multiple_sets(model, log_dataframes, batch_sizes, epochs):
+
+    splitted = [train_test_split(df, test_size=0.2) for df in log_dataframes]
+    train_dfs = [t for t, v in splitted]
+    valid_dfs = [v for t, v in splitted]
+
+    valid_gen = data_generator_from_muiltiple_sets(valid_dfs, batch_sizes, controls=['steering'])
+    train_gen = data_generator_from_muiltiple_sets(train_dfs, batch_sizes, controls=['steering'])
+
+    n_samples_train = [len(df) for df in train_dfs]
+    n_samples_valid = [len(df) for df in valid_dfs]
+
+    history = model.fit_generator(
+        train_gen,
+        samples_per_epoch=max(n_samples_train)*3,
+        validation_data=valid_gen,
+        nb_val_samples=max(n_samples_valid)*3,
+        nb_epoch=epochs
+    )
+
+    return train_dfs, valid_dfs, history
