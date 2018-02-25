@@ -187,9 +187,11 @@ def train_multiple_sets(model, log_dataframes, batch_sizes, epochs):
 
     history = model.fit_generator(
         train_gen,
-        samples_per_epoch=max(n_samples_train)*3,
+        #samples_per_epoch=max(n_samples_train)*3,
+        samples_per_epoch=sum([len(df) for df in train_dfs])*3,
         validation_data=valid_gen,
-        nb_val_samples=max(n_samples_valid)*3,
+        #nb_val_samples=max(n_samples_valid)*3,
+        nb_val_samples=sum([len(df) for df in valid_dfs])*3,
         nb_epoch=epochs
     )
 

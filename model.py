@@ -11,7 +11,7 @@ import argparse
 tf.python.control_flow_ops = tf
 
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Cropping2D, Convolution2D
+from keras.layers import Flatten, Dense, Lambda, Cropping2D, Convolution2D, Dropout
 
 import bclone
 
@@ -46,9 +46,83 @@ def nvidia_model():
     return model
 
 
+def nvidia_model_2(prob=0.5, dropout_for_dense=True):
+
+    model = Sequential()
+
+    model.add( Lambda(lambda x: x / 255. - 0.5, input_shape=(160, 320, 3)) )
+    model.add( Cropping2D(cropping=((70, 25), (0, 0))) )
+
+    model.add( Convolution2D(24, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(36, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(48, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(64, 3, 3, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+
+    model.add( Flatten() )
+
+    model.add( Dense(100, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(50, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(10, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(1) )
+
+    model.compile(loss='mse', optimizer='adam')
+
+    return model
+
+
+def nvidia_model_3(prob=0.5, dropout_for_dense=True):
+
+    model = Sequential()
+
+    model.add( Lambda(lambda x: x / 255. - 0.5, input_shape=(160, 320, 3)) )
+    model.add( Cropping2D(cropping=((70, 25), (0, 0))) )
+
+    model.add( Convolution2D(24, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(36, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(48, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(64, 3, 3, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+
+    model.add( Flatten() )
+
+    model.add( Dense(100, activation='sigmoid') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(50, activation='sigmoid') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(10, activation='sigmoid') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(1) )
+
+    model.compile(loss='mse', optimizer='adam')
+
+    return model
+
+
 def get_startegy(id):
 
-    func_name = 'strategy_{:d}'.format(id)
+    func_name = 'strategy_{}'.format(id)
     return getattr(sys.modules[__name__], func_name)
 
 
@@ -100,11 +174,27 @@ def strategy_3():
     return model, history, train_dfs, valid_dfs
 
 
+def strategy_new():
+
+    log_df_std = bclone.load_and_combine_logs(DATA_DIR_STD)
+    log_df_new = bclone.load_and_combine_logs(DATA_DIR_NEW)
+
+    model = nvidia_model_2(dropout_for_dense=False)
+    train_dfs, valid_dfs, history = bclone.train_multiple_sets(
+        model,
+        [log_df_std, log_df_new],
+        [100, 25],
+        epochs=5
+    )
+
+    return model, history, train_dfs, valid_dfs
+
+
 
 if __name__ == '__main__':
 
     arg_parser = argparse.ArgumentParser(description='Train a neural network model for clonign driving behavior.')
-    arg_parser.add_argument('--strategy', type=int, default=3)
+    arg_parser.add_argument('--strategy', default='3')
     args = arg_parser.parse_args()
 
     strategy = get_startegy(args.strategy)
