@@ -173,7 +173,7 @@ def train(model, log_df, batch_sz, epochs):
     return train, valid, history
 
 
-def train_multiple_sets(model, log_dataframes, batch_sizes, epochs):
+def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, **fit_kwargs):
 
     splitted = [train_test_split(df, test_size=0.2) for df in log_dataframes]
     train_dfs = [t for t, v in splitted]
@@ -192,7 +192,8 @@ def train_multiple_sets(model, log_dataframes, batch_sizes, epochs):
         validation_data=valid_gen,
         #nb_val_samples=max(n_samples_valid)*3,
         nb_val_samples=sum([len(df) for df in valid_dfs])*3,
-        nb_epoch=epochs
+        nb_epoch=epochs,
+        **fit_kwargs
     )
 
     return train_dfs, valid_dfs, history

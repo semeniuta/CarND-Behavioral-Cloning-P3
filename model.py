@@ -12,12 +12,14 @@ tf.python.control_flow_ops = tf
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Cropping2D, Convolution2D, Dropout
+from keras.callbacks import ModelCheckpoint
 
 import bclone
 
 
 DATA_DIR_STD = '../bclone-data-standard'
-DATA_DIR_NEW = '../my_2018-02-22'
+DATA_DIR_FAULTS = '../my_2018-02-22'
+DATA_DIR_MYDRIVE = '../my_2018-02-22'
 
 
 def nvidia_model():
@@ -144,7 +146,7 @@ def strategy_1():
 
 def strategy_2():
 
-    log_df = bclone.load_and_combine_logs(DATA_DIR_STD, DATA_DIR_NEW)
+    log_df = bclone.load_and_combine_logs(DATA_DIR_STD, DATA_DIR_FAULTS)
 
     model = nvidia_model()
 
@@ -161,7 +163,7 @@ def strategy_2():
 def strategy_3():
 
     log_df_std = bclone.load_and_combine_logs(DATA_DIR_STD)
-    log_df_new = bclone.load_and_combine_logs(DATA_DIR_NEW)
+    log_df_new = bclone.load_and_combine_logs(DATA_DIR_FAULTS)
 
     model = nvidia_model()
     train_dfs, valid_dfs, history = bclone.train_multiple_sets(
@@ -177,14 +179,21 @@ def strategy_3():
 def strategy_new():
 
     log_df_std = bclone.load_and_combine_logs(DATA_DIR_STD)
-    log_df_new = bclone.load_and_combine_logs(DATA_DIR_NEW)
+    log_df_faults = bclone.load_and_combine_logs(DATA_DIR_FAULTS)
+    log_df_mydrive = bclone.load_and_combine_logs(DATA_DIR_MYDRIVE)
 
     model = nvidia_model_2(dropout_for_dense=False)
+
+    filepath="weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+
     train_dfs, valid_dfs, history = bclone.train_multiple_sets(
         model,
-        [log_df_std, log_df_new],
-        [100, 25],
-        epochs=5
+        [log_df_std, log_df_mydrive, log_df_faults],
+        [20, 20, 8],
+        epochs=10,
+        callbacks=callbacks_list
     )
 
     return model, history, train_dfs, valid_dfs
