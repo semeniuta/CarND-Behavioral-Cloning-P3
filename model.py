@@ -19,7 +19,9 @@ import bclone
 
 DATA_DIR_STD = '../bclone-data-standard'
 DATA_DIR_FAULTS = '../my_2018-02-22'
-DATA_DIR_MYDRIVE = '../my_2018-02-22'
+DATA_DIR_MYDRIVE_1 = '../my_2018-03-13'
+DATA_DIR_MYDRIVE_2 = '../my_2018-03-18-1'
+DATA_DIR_MYDRIVE_3 = '../my_2018-03-18-2'
 
 
 def nvidia_model():
@@ -122,6 +124,43 @@ def nvidia_model_3(prob=0.5, dropout_for_dense=True):
     return model
 
 
+def nvidia_model_4(prob=0.5, dropout_for_dense=True):
+
+    model = Sequential()
+
+    model.add( Lambda(lambda x: x / 255. - 0.5, input_shape=(160, 320, 3)) )
+    model.add( Cropping2D(cropping=((70, 25), (0, 0))) )
+
+    model.add( Convolution2D(24, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+    model.add( Convolution2D(64, 3, 3, subsample=(2, 2), activation='relu') )
+    model.add(Dropout(prob))
+
+    model.add( Flatten() )
+
+    model.add( Dense(100, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(50, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(25, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(10, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(1) )
+
+    model.compile(loss='mse', optimizer='adam')
+
+    return model
+
+
 def get_startegy(id):
 
     func_name = 'strategy_{}'.format(id)
@@ -180,19 +219,28 @@ def strategy_new():
 
     log_df_std = bclone.load_and_combine_logs(DATA_DIR_STD)
     log_df_faults = bclone.load_and_combine_logs(DATA_DIR_FAULTS)
-    log_df_mydrive = bclone.load_and_combine_logs(DATA_DIR_MYDRIVE)
+    log_df_mydrive_1 = bclone.load_and_combine_logs(DATA_DIR_MYDRIVE_1)
+    log_df_mydrive_2 = bclone.load_and_combine_logs(DATA_DIR_MYDRIVE_2)
+    log_df_mydrive_3 = bclone.load_and_combine_logs(DATA_DIR_MYDRIVE_3)
 
-    model = nvidia_model_2(dropout_for_dense=False)
+    datasets = [log_df_std, log_df_mydrive_1, log_df_mydrive_2, log_df_mydrive_3, log_df_faults]
 
-    filepath="weights-improvement-{epoch:02d}-{val_loss:.2f}.h5"
-    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='max')
+    for df in datasets:
+        print(len(df))
+
+    model = nvidia_model_2(prob=0.2, dropout_for_dense=False)
+
+    filepath="weights-improvement-{epoch:02d}-{val_loss:.4f}.h5"
+    #checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='max')
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=False, mode='max')
     callbacks_list = [checkpoint]
 
     train_dfs, valid_dfs, history = bclone.train_multiple_sets(
         model,
-        [log_df_std, log_df_mydrive, log_df_faults],
-        [20, 20, 8],
-        epochs=10,
+        datasets,
+        [28, 7, 7, 7, 12],
+        epochs=15,
+        valid_share=0.2,
         callbacks=callbacks_list
     )
 

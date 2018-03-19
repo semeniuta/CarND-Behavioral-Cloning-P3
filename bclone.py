@@ -173,9 +173,9 @@ def train(model, log_df, batch_sz, epochs):
     return train, valid, history
 
 
-def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, **fit_kwargs):
+def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, valid_share=0.2, **fit_kwargs):
 
-    splitted = [train_test_split(df, test_size=0.2) for df in log_dataframes]
+    splitted = [train_test_split(df, test_size=valid_share) for df in log_dataframes]
     train_dfs = [t for t, v in splitted]
     valid_dfs = [v for t, v in splitted]
 
