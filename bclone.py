@@ -189,13 +189,41 @@ def train(model, log_df, batch_sz, epochs):
     return train, valid, history
 
 
-def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, valid_share=0.2, **fit_kwargs):
+def n_samples_func_max_sz(dfs):
+    lengths = [len(df) for df in dfs]
+    return max(lengths) * 3
+
+
+def n_samples_func_min_sz(dfs):
+    lengths = [len(df) for df in dfs]
+    return min(lengths) * 3
+
+
+def n_samples_func_sum_all(dfs):
+    lengths = [len(df) for df in dfs]
+    return sum(lengths) * 3
+
+
+def train_multiple_sets(
+    model,
+    log_dataframes,
+    batch_sizes,
+    epochs,
+    valid_share=0.2,
+    n_samples_func=n_samples_func_min_sz,
+    **fit_kwargs
+):
     '''
     Train the given model with multiple sets of data using
     data_generator_from_muiltiple_sets.
 
     valid_share -- percentage of the validation set size compared to the
                    total number of samples
+    n_samples_func -- a function that, given a list of data frames
+                      (e.g. train_dfs or valid_dfs), returns the
+                      maximal number of samples used in
+                      model.fit_generator (samples_per_epoch for train_dfs
+                      and nb_val_samples for valid_dfs)
     fit_kwargs -- keyworded arguments forwarded to the model.fit_generator
                   function
     '''
@@ -207,16 +235,11 @@ def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, valid_share=
     valid_gen = data_generator_from_muiltiple_sets(valid_dfs, batch_sizes, controls=['steering'])
     train_gen = data_generator_from_muiltiple_sets(train_dfs, batch_sizes, controls=['steering'])
 
-    n_samples_train = [len(df) for df in train_dfs]
-    n_samples_valid = [len(df) for df in valid_dfs]
-
     history = model.fit_generator(
         train_gen,
-        #samples_per_epoch=max(n_samples_train)*3,
-        samples_per_epoch=sum([len(df) for df in train_dfs])*3,
+        samples_per_epoch=n_samples_func(train_dfs),
         validation_data=valid_gen,
-        #nb_val_samples=max(n_samples_valid)*3,
-        nb_val_samples=sum([len(df) for df in valid_dfs])*3,
+        nb_val_samples=n_samples_func(valid_dfs),
         nb_epoch=epochs,
         **fit_kwargs
     )

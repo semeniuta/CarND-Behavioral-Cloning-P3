@@ -209,7 +209,8 @@ def strategy_3():
         model,
         [log_df_std, log_df_new],
         [40, 8],
-        epochs=2
+        epochs=2,
+        n_samples_func=bclone.n_samples_func_sum_all
     )
 
     return model, history, train_dfs, valid_dfs
@@ -241,6 +242,7 @@ def strategy_new():
         [28, 7, 7, 7, 12],
         epochs=15,
         valid_share=0.2,
+        n_samples_func=bclone.n_samples_func_sum_all,
         callbacks=callbacks_list
     )
 
