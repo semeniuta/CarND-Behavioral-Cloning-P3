@@ -131,6 +131,15 @@ def data_generator(log_df, batch_size=32, controls=['steering', 'throttle', 'spe
 
 
 def data_generator_from_muiltiple_sets(log_dataframes, batch_sizes, controls=['steering', 'throttle', 'speed', 'brake']):
+    '''
+    Infinite data generator for use in Keras' model.fit_generator
+    that loads data from multiple sets at once. Each data frame in
+    log_dataframes has the associated batch size (in batch_sizes),
+    which internally form the data_generator per set. Different
+    batch_sizes control how much data samples are drawn from the corresponding
+    data sets. On every invocation of the generator,
+    the yielded data subsets are combined.
+    '''
 
     assert len(log_dataframes) == len(batch_sizes)
 
@@ -150,6 +159,10 @@ def data_generator_from_muiltiple_sets(log_dataframes, batch_sizes, controls=['s
 
 
 def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
+    '''
+    Helper function for calling Keras' model.fit_generator.
+    Returns the resulting history object.
+    '''
 
     history = model.fit_generator(
         train_gen,
@@ -163,6 +176,9 @@ def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
 
 
 def train(model, log_df, batch_sz, epochs):
+    '''
+    Train the given model with the available set of data
+    '''
 
     train, valid = train_test_split(log_df, test_size=0.2)
     valid_gen = data_generator(valid, batch_size=batch_sz, controls=['steering'])
@@ -174,6 +190,15 @@ def train(model, log_df, batch_sz, epochs):
 
 
 def train_multiple_sets(model, log_dataframes, batch_sizes, epochs, valid_share=0.2, **fit_kwargs):
+    '''
+    Train the given model with multiple sets of data using
+    data_generator_from_muiltiple_sets.
+
+    valid_share -- percentage of the validation set size compared to the
+                   total number of samples
+    fit_kwargs -- keyworded arguments forwarded to the model.fit_generator
+                  function
+    '''
 
     splitted = [train_test_split(df, test_size=valid_share) for df in log_dataframes]
     train_dfs = [t for t, v in splitted]
