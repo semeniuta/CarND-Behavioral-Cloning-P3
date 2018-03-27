@@ -158,7 +158,7 @@ def data_generator_from_muiltiple_sets(log_dataframes, batch_sizes, controls=['s
         yield sklearn.utils.shuffle(np.vstack(x), np.hstack(y))
 
 
-def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
+def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs, **fit_kwargs):
     '''
     Helper function for calling Keras' model.fit_generator.
     Returns the resulting history object.
@@ -169,13 +169,14 @@ def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs):
         samples_per_epoch=len(log_df_train)*3,
         validation_data=valid_gen,
         nb_val_samples=len(log_df_valid)*3,
-        nb_epoch=n_epochs
+        nb_epoch=n_epochs,
+        **fit_kwargs
     )
 
     return history
 
 
-def train(model, log_df, batch_sz, epochs):
+def train(model, log_df, batch_sz, epochs, **fit_kwargs):
     '''
     Train the given model with the available set of data
     '''
@@ -184,24 +185,19 @@ def train(model, log_df, batch_sz, epochs):
     valid_gen = data_generator(valid, batch_size=batch_sz, controls=['steering'])
     train_gen = data_generator(train, batch_size=batch_sz, controls=['steering'])
 
-    history = fit_gen(model, train_gen, valid_gen, train, valid, n_epochs=epochs)
+    history = fit_gen(model, train_gen, valid_gen, train, valid, n_epochs=epochs, **fit_kwargs)
 
     return train, valid, history
 
 
-def n_samples_func_max_sz(dfs):
-    lengths = [len(df) for df in dfs]
-    return max(lengths) * 3
+def determine_n_samples(dfs, batch_sizes):
 
+    sizes = [len(df) for df in dfs]
+    smallest_size_idx = np.argmin(sizes)
 
-def n_samples_func_min_sz(dfs):
-    lengths = [len(df) for df in dfs]
-    return min(lengths) * 3
+    factor = len(dfs[smallest_size_idx]) // batch_sizes[smallest_size_idx]
 
-
-def n_samples_func_sum_all(dfs):
-    lengths = [len(df) for df in dfs]
-    return sum(lengths) * 3
+    return 3 * factor * sum(batch_sizes)
 
 
 def train_multiple_sets(
@@ -210,7 +206,6 @@ def train_multiple_sets(
     batch_sizes,
     epochs,
     valid_share=0.2,
-    n_samples_func=n_samples_func_min_sz,
     **fit_kwargs
 ):
     '''
@@ -219,11 +214,6 @@ def train_multiple_sets(
 
     valid_share -- percentage of the validation set size compared to the
                    total number of samples
-    n_samples_func -- a function that, given a list of data frames
-                      (e.g. train_dfs or valid_dfs), returns the
-                      maximal number of samples used in
-                      model.fit_generator (samples_per_epoch for train_dfs
-                      and nb_val_samples for valid_dfs)
     fit_kwargs -- keyworded arguments forwarded to the model.fit_generator
                   function
     '''
@@ -235,11 +225,14 @@ def train_multiple_sets(
     valid_gen = data_generator_from_muiltiple_sets(valid_dfs, batch_sizes, controls=['steering'])
     train_gen = data_generator_from_muiltiple_sets(train_dfs, batch_sizes, controls=['steering'])
 
+    n_samples_train = determine_n_samples(train_dfs, batch_sizes)
+    n_samples_valid = determine_n_samples(valid_dfs, batch_sizes)
+
     history = model.fit_generator(
         train_gen,
-        samples_per_epoch=n_samples_func(train_dfs),
+        samples_per_epoch=n_samples_train,
         validation_data=valid_gen,
-        nb_val_samples=n_samples_func(valid_dfs),
+        nb_val_samples=n_samples_valid,
         nb_epoch=epochs,
         **fit_kwargs
     )

@@ -12,6 +12,7 @@ tf.python.control_flow_ops = tf
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Cropping2D, Convolution2D, Dropout
+from keras.layers.pooling import MaxPooling2D
 from keras.callbacks import ModelCheckpoint
 
 import bclone
@@ -22,6 +23,9 @@ DATA_DIR_FAULTS = '../my_2018-02-22'
 DATA_DIR_MYDRIVE_1 = '../my_2018-03-13'
 DATA_DIR_MYDRIVE_2 = '../my_2018-03-18-1'
 DATA_DIR_MYDRIVE_3 = '../my_2018-03-18-2'
+DATA_DIR_MYDRIVE_4 = '../my_2018-03-27' # a big set of my own data
+DATA_DIR_SPECIAL = '../my_2018-03-27-special' # another set of special situations
+DATA_DIR_SPECIAL2 = '../my_2018-03-27-special2' # red stuff and shadows
 
 
 def nvidia_model():
@@ -161,6 +165,51 @@ def nvidia_model_4(prob=0.5, dropout_for_dense=True):
     return model
 
 
+def mymodel(prob=0.5, dropout_for_dense=False):
+
+    model = Sequential()
+
+    model.add( Lambda(lambda x: x / 255. - 0.5, input_shape=(160, 320, 3)) )
+    model.add( Cropping2D(cropping=((70, 25), (0, 0))) )
+
+    model.add( Convolution2D(24, 5, 5, subsample=(1, 1), activation='relu') )
+    #model.add( MaxPooling2D(pool_size=(1, 2)) )
+    model.add( Dropout(prob) )
+
+    model.add( Convolution2D(36, 5, 5, subsample=(2, 2), activation='relu') )
+    #model.add( MaxPooling2D(pool_size=(1, 2)) )
+    model.add( Dropout(prob) )
+
+    model.add( Convolution2D(48, 5, 5, subsample=(2, 2), activation='relu') )
+    model.add( Dropout(prob) )
+
+    model.add( Convolution2D(64, 3, 3, subsample=(2, 2), activation='relu') )
+    model.add( Dropout(prob) )
+
+    model.add( Convolution2D(64, 3, 3, subsample=(2, 2), activation='relu') )
+    model.add( Dropout(prob) )
+
+    model.add( Flatten() )
+
+    model.add( Dense(100, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(50, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(10, activation='relu') )
+    if dropout_for_dense:
+        model.add(Dropout(prob))
+
+    model.add( Dense(1) )
+
+    model.compile(loss='mse', optimizer='adam')
+
+    return model
+
+
 def get_startegy(id):
 
     func_name = 'strategy_{}'.format(id)
@@ -209,14 +258,13 @@ def strategy_3():
         model,
         [log_df_std, log_df_new],
         [40, 8],
-        epochs=2,
-        n_samples_func=bclone.n_samples_func_sum_all
+        epochs=2
     )
 
     return model, history, train_dfs, valid_dfs
 
 
-def strategy_new():
+def strategy_multi():
 
     log_df_std = bclone.load_and_combine_logs(DATA_DIR_STD)
     log_df_faults = bclone.load_and_combine_logs(DATA_DIR_FAULTS)
@@ -229,7 +277,9 @@ def strategy_new():
     for df in datasets:
         print(len(df))
 
-    model = nvidia_model_2(prob=0.2, dropout_for_dense=False)
+    # This was one pretty good
+    #model = nvidia_model_2(prob=0.2, dropout_for_dense=False)
+    model = mymodel(prob=0.2, dropout_for_dense=False)
 
     filepath="weights-improvement-{epoch:02d}-{val_loss:.4f}.h5"
     #checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='max')
@@ -240,14 +290,42 @@ def strategy_new():
         model,
         datasets,
         [28, 7, 7, 7, 12],
-        epochs=15,
+        epochs=20,
         valid_share=0.2,
-        n_samples_func=bclone.n_samples_func_sum_all,
         callbacks=callbacks_list
     )
 
     return model, history, train_dfs, valid_dfs
 
+
+def strategy_kiss():
+
+    log_df = bclone.load_and_combine_logs(
+        DATA_DIR_STD,
+        DATA_DIR_MYDRIVE_1,
+        DATA_DIR_MYDRIVE_2,
+        DATA_DIR_MYDRIVE_3,
+        DATA_DIR_MYDRIVE_4,
+        DATA_DIR_SPECIAL,
+        #DATA_DIR_SPECIAL2
+    )
+
+    #model = mymodel(prob=0.4, dropout_for_dense=True)
+    model = nvidia_model_2(prob=0.3, dropout_for_dense=False)
+
+    filepath="weights-improvement-{epoch:02d}-{val_loss:.4f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=False, mode='max')
+    callbacks_list = [checkpoint]
+
+    train_df, valid_df, history = bclone.train(
+        model,
+        log_df,
+        batch_sz=50,
+        epochs=20,
+        callbacks=callbacks_list
+    )
+
+    return model, history, train_df, valid_df
 
 
 if __name__ == '__main__':
