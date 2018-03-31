@@ -109,9 +109,10 @@ def open_images(log_df, controls, left_correction=0., right_correction=0.):
 
     for i in range(len(log_df)):
         line = log_df.iloc[i]
-        controls_vals = line[controls]
 
         for c in cameras:
+
+            controls_vals = line[controls]
 
             imfile = line[c]
             im = cv2.imread(imfile)
@@ -236,7 +237,7 @@ def train(
         samples_per_epoch=len(train)*3,
         validation_data=valid_gen,
         nb_val_samples=len(valid)*3,
-        nb_epoch=n_epochs,
+        nb_epoch=epochs,
         **fit_kwargs
     )
 
