@@ -307,11 +307,18 @@ def strategy_kiss():
         DATA_DIR_MYDRIVE_3,
         DATA_DIR_MYDRIVE_4,
         DATA_DIR_SPECIAL,
-        #DATA_DIR_SPECIAL2
+    )
+
+    df_special2 = bclone.load_log(DATA_DIR_SPECIAL2)
+    bclone.add_data_dir_info_to_df(df_special2, DATA_DIR_SPECIAL2)
+
+    log_df = bclone.combine_dataframes(
+        log_df,
+        df_special2[:1500] # a hack so not to take the entire dataset
     )
 
     #model = mymodel(prob=0.4, dropout_for_dense=True)
-    model = nvidia_model_2(prob=0.3, dropout_for_dense=False)
+    model = nvidia_model_2(prob=0.5, dropout_for_dense=True) # 0.3, False
 
     filepath="weights-improvement-{epoch:02d}-{val_loss:.4f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=False, mode='max')
@@ -320,7 +327,7 @@ def strategy_kiss():
     train_df, valid_df, history = bclone.train(
         model,
         log_df,
-        batch_sz=50,
+        batch_sz=60, # 50
         epochs=20,
         callbacks=callbacks_list
     )

@@ -29,6 +29,10 @@ def add_data_dir_info_to_df(df, data_dir):
             df.at[i, col] = new_val
 
 
+def combine_dataframes(df1, df2):
+    return df1.append(df2, ignore_index=True)
+
+
 def load_and_combine_logs(*dirs):
     '''
     Load driving logs from the supplied directories
@@ -43,7 +47,7 @@ def load_and_combine_logs(*dirs):
 
     res = dataframes[0]
     for df in dataframes[1:]:
-        res = res.append(df, ignore_index=True)
+        res = combine_dataframes(res, df)
 
     return res
 
@@ -102,6 +106,29 @@ def open_images(log_df, controls):
 
             im_list.append(im)
             controls_list.append(controls_vals)
+
+    X = np.array(im_list)
+    y = np.array(controls_list)
+
+    if y.shape[1] == 1:
+        y = y.reshape(-1)
+
+    return X, y
+
+
+def open_images_from_single_camera(log_df, controls, camera='center'):
+
+    im_list = []
+    controls_list = []
+    for i in range(len(log_df)):
+        line = log_df.iloc[i]
+        controls_vals = line[controls]
+
+        imfile = line[camera]
+        im = cv2.imread(imfile)
+
+        im_list.append(im)
+        controls_list.append(controls_vals)
 
     X = np.array(im_list)
     y = np.array(controls_list)
