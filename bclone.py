@@ -85,26 +85,42 @@ def load_data(
     return images, controls_df
 
 
-def open_images(log_df, controls):
+def open_images(log_df, controls, left_correction=0., right_correction=0.):
     '''
     For a given driving log data frame (or a subset of one),
     open images from all three cameras and gather them with
-    the corresponding measuremenets from the log
+    the corresponding measuremenets from the log.
+
+    'left' and 'right' images can be associated with an offsetted value
+    of 'steering' parameter, supplied with left_correction and right_correction
+    parameters respectively.
     '''
 
     cameras = ('center', 'left', 'right')
 
+    corrections = {
+        'center': 0.,
+        'left': left_correction,
+        'right': right_correction
+    }
+
     im_list = []
     controls_list = []
+
     for i in range(len(log_df)):
         line = log_df.iloc[i]
         controls_vals = line[controls]
+
         for c in cameras:
 
             imfile = line[c]
             im = cv2.imread(imfile)
 
             im_list.append(im)
+
+            if 'steering' in controls:
+                controls_vals['steering'] += corrections[c]
+
             controls_list.append(controls_vals)
 
     X = np.array(im_list)
@@ -139,7 +155,13 @@ def open_images_from_single_camera(log_df, controls, camera='center'):
     return X, y
 
 
-def data_generator(log_df, batch_size=32, controls=['steering', 'throttle', 'speed', 'brake']):
+def data_generator(
+    log_df,
+    batch_size=32,
+    controls=['steering', 'throttle', 'speed', 'brake'],
+    left_correction=0.,
+    right_correction=0.
+):
     '''
     Infinite data generator for use in Keras' model.fit_generator.
     Opens images from all three cameras using open_images.
@@ -153,7 +175,14 @@ def data_generator(log_df, batch_size=32, controls=['steering', 'throttle', 'spe
     while True:
         for offset in range(0, n, batch_size):
             log_subset = log_df[offset:offset+batch_size]
-            X_batch, y_batch = open_images(log_subset, controls)
+
+            X_batch, y_batch = open_images(
+                log_subset,
+                controls,
+                left_correction,
+                right_correction
+            )
+
             yield sklearn.utils.shuffle(X_batch, y_batch)
 
 
@@ -185,34 +214,31 @@ def data_generator_from_muiltiple_sets(log_dataframes, batch_sizes, controls=['s
         yield sklearn.utils.shuffle(np.vstack(x), np.hstack(y))
 
 
-def fit_gen(model, train_gen, valid_gen, log_df_train, log_df_valid, n_epochs, **fit_kwargs):
-    '''
-    Helper function for calling Keras' model.fit_generator.
-    Returns the resulting history object.
-    '''
-
-    history = model.fit_generator(
-        train_gen,
-        samples_per_epoch=len(log_df_train)*3,
-        validation_data=valid_gen,
-        nb_val_samples=len(log_df_valid)*3,
-        nb_epoch=n_epochs,
-        **fit_kwargs
-    )
-
-    return history
-
-
-def train(model, log_df, batch_sz, epochs, **fit_kwargs):
+def train(
+    model,
+    log_df,
+    batch_sz,
+    epochs,
+    left_correction=0.,
+    right_correction=0.,
+    **fit_kwargs
+):
     '''
     Train the given model with the available set of data
     '''
 
     train, valid = train_test_split(log_df, test_size=0.2)
-    valid_gen = data_generator(valid, batch_size=batch_sz, controls=['steering'])
-    train_gen = data_generator(train, batch_size=batch_sz, controls=['steering'])
+    valid_gen = data_generator(valid, batch_sz, ['steering'], left_correction, right_correction)
+    train_gen = data_generator(train, batch_sz, ['steering'], left_correction, right_correction)
 
-    history = fit_gen(model, train_gen, valid_gen, train, valid, n_epochs=epochs, **fit_kwargs)
+    history = model.fit_generator(
+        train_gen,
+        samples_per_epoch=len(train)*3,
+        validation_data=valid_gen,
+        nb_val_samples=len(valid)*3,
+        nb_epoch=n_epochs,
+        **fit_kwargs
+    )
 
     return train, valid, history
 
