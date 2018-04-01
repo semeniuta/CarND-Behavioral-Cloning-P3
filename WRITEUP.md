@@ -39,7 +39,7 @@ The network operated on (160, 320, 3) images, captured by the driving simulator.
 The described model is defined with Keras using the following function:
 
 ```python
-def nn_model(prob=0.5, dropout_for_dense=True):
+def nn_model(prob=0.5, dropout_for_dense=False):
 
     model = Sequential()
 
@@ -80,47 +80,43 @@ Detailed dimensionality of the network's layers is outlined below (a call to `mo
 
 
 ```
-Layer (type)                     Output Shape          Param #     Connected to                     
+____________________________________________________________________________________________________
+Layer (type)                     Output Shape          Param #     Connected to
 ====================================================================================================
-lambda_2 (Lambda)                (None, 160, 320, 3)   0           lambda_input_2[0][0]             
+lambda_1 (Lambda)                (None, 160, 320, 3)   0           lambda_input_1[0][0]
 ____________________________________________________________________________________________________
-cropping2d_2 (Cropping2D)        (None, 65, 320, 3)    0           lambda_2[0][0]                   
+cropping2d_1 (Cropping2D)        (None, 65, 320, 3)    0           lambda_1[0][0]
 ____________________________________________________________________________________________________
-convolution2d_5 (Convolution2D)  (None, 31, 158, 24)   1824        cropping2d_2[0][0]               
+convolution2d_1 (Convolution2D)  (None, 31, 158, 24)   1824        cropping2d_1[0][0]
 ____________________________________________________________________________________________________
-dropout_1 (Dropout)              (None, 31, 158, 24)   0           convolution2d_5[0][0]            
+dropout_1 (Dropout)              (None, 31, 158, 24)   0           convolution2d_1[0][0]
 ____________________________________________________________________________________________________
-convolution2d_6 (Convolution2D)  (None, 14, 77, 36)    21636       dropout_1[0][0]                  
+convolution2d_2 (Convolution2D)  (None, 14, 77, 36)    21636       dropout_1[0][0]
 ____________________________________________________________________________________________________
-dropout_2 (Dropout)              (None, 14, 77, 36)    0           convolution2d_6[0][0]            
+dropout_2 (Dropout)              (None, 14, 77, 36)    0           convolution2d_2[0][0]
 ____________________________________________________________________________________________________
-convolution2d_7 (Convolution2D)  (None, 5, 37, 48)     43248       dropout_2[0][0]                  
+convolution2d_3 (Convolution2D)  (None, 5, 37, 48)     43248       dropout_2[0][0]
 ____________________________________________________________________________________________________
-dropout_3 (Dropout)              (None, 5, 37, 48)     0           convolution2d_7[0][0]            
+dropout_3 (Dropout)              (None, 5, 37, 48)     0           convolution2d_3[0][0]
 ____________________________________________________________________________________________________
-convolution2d_8 (Convolution2D)  (None, 2, 18, 64)     27712       dropout_3[0][0]                  
+convolution2d_4 (Convolution2D)  (None, 2, 18, 64)     27712       dropout_3[0][0]
 ____________________________________________________________________________________________________
-dropout_4 (Dropout)              (None, 2, 18, 64)     0           convolution2d_8[0][0]            
+dropout_4 (Dropout)              (None, 2, 18, 64)     0           convolution2d_4[0][0]
 ____________________________________________________________________________________________________
-flatten_2 (Flatten)              (None, 2304)          0           dropout_4[0][0]                  
+flatten_1 (Flatten)              (None, 2304)          0           dropout_4[0][0]
 ____________________________________________________________________________________________________
-dense_5 (Dense)                  (None, 100)           230500      flatten_2[0][0]                  
+dense_1 (Dense)                  (None, 100)           230500      flatten_1[0][0]
 ____________________________________________________________________________________________________
-dropout_5 (Dropout)              (None, 100)           0           dense_5[0][0]                    
+dense_2 (Dense)                  (None, 50)            5050        dense_1[0][0]
 ____________________________________________________________________________________________________
-dense_6 (Dense)                  (None, 50)            5050        dropout_5[0][0]                  
+dense_3 (Dense)                  (None, 10)            510         dense_2[0][0]
 ____________________________________________________________________________________________________
-dropout_6 (Dropout)              (None, 50)            0           dense_6[0][0]                    
-____________________________________________________________________________________________________
-dense_7 (Dense)                  (None, 10)            510         dropout_6[0][0]                  
-____________________________________________________________________________________________________
-dropout_7 (Dropout)              (None, 10)            0           dense_7[0][0]                    
-____________________________________________________________________________________________________
-dense_8 (Dense)                  (None, 1)             11          dropout_7[0][0]                  
+dense_4 (Dense)                  (None, 1)             11          dense_3[0][0]
 ====================================================================================================
 Total params: 330,491
 Trainable params: 330,491
 Non-trainable params: 0
+____________________________________________________________________________________________________
 ```
 
 ## Training strategy

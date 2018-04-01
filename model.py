@@ -29,7 +29,7 @@ DATASETS = {
 }
 
 
-def nn_model(prob=0.5, dropout_for_dense=True):
+def nn_model(prob=0.5, dropout_for_dense=False):
 
     model = Sequential()
 
